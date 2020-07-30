@@ -1,0 +1,117 @@
+---
+title: "Income Analysis based on college major"
+author: "Rohit Benny Abraham"
+date: "7/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+The goal is to check for a significant association, if any, between college 
+major category and the income level. There are 16 different categories and 173 
+observations.
+
+## Loading the college dataframe
+
+```{r loading}
+library(collegeIncome)
+data(college)
+head(college)
+unique(college$major_category)
+```
+
+## Variable transformation
+
+```{r preprocessing}
+college$major <- as.factor(college$major)
+college$major_code <- as.factor(college$major_code)
+college$major_category <- as.factor(college$major_category)
+```
+
+## Relationship visualization
+
+```{r EDA}
+boxplot(median/1000 ~ major_category, data = college, main = "Income vs. Major",
+        ylab="Income (in $1000)", xlab = "Major Category", las = 2)
+```
+
+The distribution is not normal based on the boxplot but for practicing linear
+model let's assume it to be normal
+
+## Analysis
+
+```{r Analysis}
+# First we will reorder the major categories alphabeticaly
+college <- college[order(college$major_category), ]
+
+# Applying the linear model with Income as outcome and major as predictor
+mdl <- lm(median ~ major_category - 1, data = college)
+summary(mdl)$coef
+
+# Apparently, most majors have similar income, except the Business(the highest)
+major_category_bus <- relevel(college$major_category, "Business")
+mdlBus <- lm(median ~ major_category_bus, data = college)
+summary(mdlBus)$coef
+
+business_diff <- summary(mdlBus)$coef[-1,]
+
+# Check for the lowest(significant) p-values
+business_diff[order(business_diff[,4])[1:6], ]
+
+# Income for business is significantly different from Computers & Mathematics, 
+# Education, Engineering, Humanities & Liberal Arts and Social Science
+
+# We will do the same for the lowest income category i.e. Interdisciplinary
+major_category_inter <- relevel(college$major_category, "Interdisciplinary")
+mdlInter <- lm(median ~ major_category_inter, data = college)
+summary(mdlInter)$coef
+
+inter_diff <- summary(mdlInter)$coef[-1,]
+
+# Check for the lowest(significant) p-values
+inter_diff[order(inter_diff[,4])[1:5], ]
+
+# Income for Interdisciplinary is insignificant to other categories
+```
+
+The highest income group was of Business with a median salary of $49153.85. 
+So by setting income for Business as a major category I ran the linear model and
+found that it is significantly different from Computers & Mathematics, 
+Education, Engineering, Humanities & Liberal Arts, and Social Science by 
+verifying the p-values and keeping the error rate as 5%.
+
+## Gender comparision
+
+Now we will be adding Gender(per_men and per_women) as predictor along with 
+major category to check for any significant assocaiation.
+
+```{r Gender}
+# Gender comparision with business as the major category
+mdlGen <- lm(median ~ major_category + perc_men + perc_women, data = college)
+summary(mdlGen)$coef
+Gen_diff <- summary(mdlGen)$coef[-1,]
+# Check for the lowest(significant) p-values
+Gen_diff[order(Gen_diff[,4])[1:5], ]
+```
+
+No significant association can be seen due to high p-values
+
+With Business being the major category we will perform the liner modeling again
+
+```{r GenBus}
+mdlBusGen <- lm(median ~ major_category_bus + perc_men + perc_women, 
+                data = college)
+summary(mdlBusGen)$coef
+
+businessGen_diff <- summary(mdlBusGen)$coef[-1,]
+# Check for the lowest(significant) p-values
+businessGen_diff[order(businessGen_diff[,4])[1:5], ]
+```
+
+Again, no significant association can be seen due to high p-values so we can 
+conclude that gender has no significant role in income levels for a given major
+category
